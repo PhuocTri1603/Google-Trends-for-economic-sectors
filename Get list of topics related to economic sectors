@@ -1,0 +1,47 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Feb 22 14:30:13 2021
+
+@author: MyPC
+"""
+
+#Import the necessary packages
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from pytrends.request import TrendReq
+pytrends = TrendReq(hl='en-US', tz=360)
+
+#Get topics
+Topics = ["Birthday", "Private employment agency" , "House moving", "Unemployment benefits", "Recruitment", "Investment", "Lawyer", "Jobs", "Economic crisis", "Unemployment", "Financial crisis", 'Public debt', "Office space", "Job search", "Temporary jobs", "Housing bubble", "House price index", "Mortgage", "Crisis", "Loan", "Interest", "Student loan", "Affordable housing", "Recession", "Krach", "Bank", "Bankruptcy", "Exportation", "Commercial Building", "Luggage", "Judicial Liquidation", "Foreclosure"]
+Topics_Codes = []
+Title = []
+Topics_dict=[]
+
+for i in Topics:
+    for n in pytrends.suggestions(keyword=i):
+        if n["type"] == "Topic": #and n["title"]==i:
+            Topics_Codes.append(n["mid"])
+            Title.append(n["title"])
+            Topics_dict.append(n)
+            
+
+df_Codes= pd.DataFrame(Topics_dict)
+
+#Get Google trends data by Topics
+EXACT_TOPICS = df_Codes['mid'].to_list()
+DATE_INTERVAL = 'all'
+COUNTRY = ["AR", "AU", "AT", "BE", "BR", "BG", "CA", "CL", "CH", "CO", "CR", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IS", "IN", "ID", "IR", "IL", "IT", "JP", "LV", "LT", "LU","MY", "MX", "MA", "NL", "NO", "NZ", "PL", "PT", "RO", "RU", "SA", "SG", "SK", "SI", "ZA", "ES", "SE", "CH", "TH", "TN", "TR", "GB", "US", "VN"  ]
+CATEGORY=0
+SEARCH_TYPE=''
+Individual_exact_topics = [["/m/01kcnl"], ["/g/11f15dfhh7"], ["/m/0d3fyv"], ["/m/0245b"], ["/g/12276x6t"], ["/g/11h37lgpls"], ["/m/043rxy0"], ["/m/0218w7"], ["/g/11jg4ldpyf"], ["/m/0jt7xwz"], ["/m/02r4wgv"], ["/m/03nw7w"], ["/m/08tqx8"], ["/g/121k2p3x"], ["/m/02p18sk"], ["/m/0g_fl"], ["/g/11b63943yt"], ["/m/0h3p28z"], ["/m/08nwn8"], ["/g/11cmmqrf2n"], ["/g/1211cg58"], ["/m/07s_c"], ["/m/0218w7"], ["/m/0k0pxrc"], ["/m/02p2c9s"], ["/g/122z2s3w"], ["/m/088p1q"], ["/m/05c4t6r"], ["/m/01mxnf"], ["/m/033gpp"], ["/m/01vnp9"], ["/g/1tdp5qx8"], ["/g/11b6c41qzv"], ["/g/1tdz494n"], ["/g/1tj2fh73"], ["/m/04115t2"], ["/m/0666d1"], ["/m/09v3khf"], ["/m/0glmx50"], ["/g/12bmrxgtx"], ["/m/0gn3x3"], ["/m/03gsy96"], ["/m/0273t5w"], ["/m/01m123"], ["/m/0dfm1w"], ["/m/025tgfr"], ["/m/02gyy_"], ["/g/11c1wj020w"], ["/m/03rfz7"], ["/m/01dnzs"], ["/g/11h1sqgm4"], ["/m/0273t5w"], ["/m/0g8n5"], ["/m/012qn2"], ["/m/04n7dpf"], ["/m/02crs_"], ["/g/121bk8gc"], ["/m/09jvc1"], ["/g/11bbmr3x8s"], ["/m/06bmj"], ["/m/0dr8s9"], ["/g/11j5frgy02"], ["/m/0dgn86w"], ["/m/0gz_4"], ["/m/02yc2"], ["/m/04lbbc"], ["/m/01hhz"], ["/m/0352k1"], ["/m/01hhz"], ["/m/01vjsq"], ["/m/0h1dr"], ["/g/1229dkk4"], ["/m/01sr3q"], ["/m/0c0cqr"], ["/g/121gd9s1"], ["/m/03w7y7"], ["/m/07k55_3"], ["/m/087xfl"], ["/m/03h0typ"], ["/g/1ydw76zpn"], ["/m/02tp2m"], ["/m/08l37x"], ["/m/076zpk1"]]
+Individual_exact_topics = list(zip(*[iter(EXACT_TOPICS)]*1))
+Individual_exact_topics = [list(x) for x in Individual_exact_topics]
+dicti = {}
+i=1
+for Country in COUNTRY:
+    for topic in Individual_exact_topics:
+        pytrends.build_payload(kw_list=topic, timeframe = DATE_INTERVAL, geo = Country, cat=CATEGORY, gprop=SEARCH_TYPE)
+        dicti[i] = pytrends.interest_over_time()
+        i+=1
+df_trends = pd.concat(dicti, axis=1)
