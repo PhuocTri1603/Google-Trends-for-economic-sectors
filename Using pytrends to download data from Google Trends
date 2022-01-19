@@ -1,0 +1,136 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar  1 21:28:18 2021
+
+@author: MyPC
+"""
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from pytrends.request import TrendReq
+pytrends = TrendReq(hl='en-US', tz=360)
+import os
+
+#Change the link
+os.chdir("D:\Study\VNP")
+
+#Download data Topics
+kwlist = pd.read_csv("DataThesis/ListofTopics/ListofTopics.csv")['mid'].values.tolist()
+countries = pd.read_excel("DataThesis/Countries/countrieslist.xlsx")["Code Value"]
+test = ["VN"]
+trends = pd.DataFrame()
+
+for c in countries:
+    AR = pd.DataFrame()    
+    for i in kwlist:
+        i = i.split()[0]
+        kw_list = [i]
+        try:
+            pytrends.build_payload(kw_list, timeframe = "all", geo = c, cat=0, gprop="")
+            results = pytrends.interest_over_time()[i]
+            AR[i] = results
+        except:
+            AR[i] = np.NaN
+    AR['countries'] = c
+    AR = AR.reset_index()
+    trends = trends.append(AR)
+   
+trends.to_csv("DataThesis2/ListofTopics/Topic1.csv", index = False)
+
+#Merge data
+Topic1 = pd.read_csv("DataThesis/ListofTopics/WeeklyTopics1.csv")
+Topic2 = pd.read_csv("DataThesis/ListofTopics/WeeklyTopics2.csv")
+Topic = pd.concat([Topic1,Topic2])
+print(Topic)
+
+#Take quarterly frequency:
+Topic = pd.read_csv("DataThesis/ListofTopics/Topic.csv")
+Topic = Topic.fillna(0)
+Topic['date'] = pd.to_datetime(Topic["date"])
+kwlist = ['/m/01kcnl', '/g/11f15dfhh7', '/m/0d3fyv', '/m/0218w7', '/g/11jg4ldpyf',
+       '/m/0jt7xwz', '/g/11fl1rz2wz', '/m/03nw7w', '/m/08tqx8', '/g/121k2p3x',
+       '/m/02p18sk', '/m/0g_fl', '/g/11b63943yt', '/m/0h3p28z', '/m/08nwn8',
+       '/m/05y7_j', '/g/1211cg58', '/m/07s_c', '/m/0k0pxrc', '/m/02p2c9s',
+       '/m/088p1q', '/m/05c4t6r', '/m/01mxnf', '/m/033gpp', '/m/01vnp9',
+       '/g/1tdp5qx8', '/g/11b6c41qzv', '/g/1tj2fh73', '/m/04115t2',
+       '/g/11b5ypr_nn', '/m/0666d1', '/m/09v3khf', '/g/11bwpqw8vr',
+       '/g/12bmrxgtx', '/m/0gn3x3', '/m/03gsy96', '/m/0273t5w', '/m/01m123',
+       '/m/0dfm1w', '/m/025tgfr', '/m/02gyy_', '/g/11c1wj020w', '/m/03rfz7',
+       '/m/01dnzs', '/g/11h1sqgm4', '/m/0g8n5', '/m/012qn2', '/m/04n7dpf',
+       '/m/02crs_', '/g/121bk8gc', '/m/09jvc1', '/g/11bbmr3x8s', '/m/06bmj',
+       '/m/0dr8s9', '/g/11j5frgy02', '/m/04_1hv3', '/m/0gz_4', '/m/02yc2',
+       '/m/04lbbc', '/m/01hhz', '/m/0352k1', '/m/01vjsq', '/m/0h1dr',
+       '/g/1229dkk4', '/m/01sr3q', '/g/121gd9s1', '/m/03w7y7', '/m/07k55_3',
+       '/m/087xfl', '/m/03h0typ', '/g/1ydw76zpn', '/m/02tp2m', '/m/08l37x',
+       '/m/076zpk1', '/m/0dllzkg']
+QTopic = Topic.pivot_table(values = kwlist, index = "date", columns = "country", dropna = False)
+QTopic = QTopic.resample("Q").mean()
+QTopic = QTopic.stack().reset_index()
+QTopic.to_csv("DataThesis/ListofTopics/QTopic.csv", index= False)
+
+#Take log and difference
+QTopic = pd.read_csv("DataThesis/ListofTopics/WeeklyTopicsMerge.csv")
+QTopic = np.log(QTopic.set_index(["date","country"]))
+QTopic = QTopic.replace(-np.inf, 0)
+kwlist = QTopic.columns
+QTopic = QTopic.pivot_table(values = kwlist, index = "date", columns = "country")
+QTpoic = QTopic.diff(52)
+QTopic = QTopic.stack().reset_index()
+QTopic.to_csv("DataThesis/ListofTopics/QTopicCal.csv", index= False)
+
+#Summary
+df = pd.read_csv("DataThesis1/ListofTopics/QTopicCal.csv")
+df["date"] = pd.to_datetime(df["date"])
+kwlist = pd.read_csv("DataThesis/ListofTopics/ListofTopics.csv")
+
+s1 = ["SG", "AU", "JP", "TW", "NZ", "KR", "HK"]
+s2 = ["MY", "KG", "CN", "TH"]
+s3 = ["AZ", "GE", "KR", "AM", "ID"]
+s4 = ["LK", "PH", "VN", "IN", "MN"]
+s_name = ["spot1", "spot2", "spot3", "spot4"]
+s = {"spot1":s1, "spot2":s2, "spot3":s3, "spot4":s4}
+markers = ["o", "^", "p", "d"]
+
+gr = pd.DataFrame()
+
+for i in s_name:
+    rp = pd.DataFrame()
+    for c in s[i]:
+        rp = rp.append(df[df["country"]==c], ignore_index=True)
+        rp["spot"] = i
+    gr = gr.append(rp.groupby(["date", "spot"]).mean())
+    
+gr = gr.reset_index()
+    
+    
+def top(time, title):
+    n = gr.loc[(gr["date"]==time)]
+    var = n.mean().sort_values(ascending=False).head(10).index.to_list()
+    cat = []
+
+    for v in var:
+        i = kwlist.loc[(kwlist["mid"]==v)].values[0][1]
+        cat.append(i)
+    print(cat)
+    cat.append("spot")
+    var.append("spot")
+    n = n[var]
+    n.columns=cat
+    print(n.describe())
+    n=n.T
+    n.columns = n.loc[(n.index[-1])]
+    n = n.drop(index="spot")
+    n = n.reset_index()
+    plt.style.use('ggplot')
+    fig=n.plot(x="index", kind="bar", stacked=True, colormap = "seismic")
+    fig.legend()
+    plt.xlabel("Topics")
+    fig.set_title(title)
+    return plt.show()
+
+time = ["2020-03-31", "2020-06-30", "2020-09-30", "2020-12-31", "2021-03-31"]
+title = ["Q1-2020", "Q2-2020", "Q3-2020", "Q4-2020", "Q1-2021"]
+for t in time:
+    top(t, title[time.index(t)])
